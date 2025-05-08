@@ -21,8 +21,13 @@
     "prettier": "3.5.3"
   },
   "dependencies": {
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
     "pino": "^9.6.0",
     "pino-http": "^10.4.0",
-    "pino-pretty": "^13.0.0"
+    "pino-pretty": "^13.0.0",
+    "stoppable": "^1.1.0"
   }
 }
