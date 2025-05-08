@@ -12,5 +12,8 @@
     "url": "git+https://github.com/rpkaur1408/fragments.git"
   },
   "author": "Rehatpreet Kaur",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "prettier": "3.5.3"
+  }
 }
