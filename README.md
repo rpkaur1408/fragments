@@ -12,6 +12,7 @@ npm run debug	 -->  Run with debugger on port 9229
 
 npm run lint	-->  Check code quality
 
+
 ### Health Check Endpoint
 
 curl http://localhost:8080
