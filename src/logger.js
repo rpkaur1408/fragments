@@ -14,6 +14,18 @@ if (options.level === 'debug') {
   };
 }
 
+const logger = require('pino')(options); 
+
+if (options.level === 'debug') {
+  logger.debug('Environment variables:');
+
+  Object.keys(process.env).forEach(key => {
+    
+      logger.debug(`${key}: ${process.env[key]}`);
+
+  });
+}
+
 // Create and export a Pino Logger instance:
 // https://getpino.io/#/docs/api?id=logger
-module.exports = require('pino')(options);
+module.exports = logger;
