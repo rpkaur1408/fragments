@@ -9,12 +9,12 @@ describe('API Responses', () => {
     const errorResponse = createErrorResponse(404, 'not found');
     // Expect the result to look like the following
     expect(errorResponse).toEqual({
-      //Intentionally failing test
-      //status: 'error',
-      status:"ok",
+
+    status: 'error',
+
       error: {
-        //code: 404,
-        code :400,
+        code: 404,
+
         message: 'not found',
       },
     });
@@ -38,13 +38,10 @@ describe('API Responses', () => {
     // Expect the result to look like the following
     expect(successResponse).toEqual({
       status: 'ok',
-      // Breaking code intentionally
 
-      // a: 1,
-      // b: 2,
-       a: 2,         // Wrong - should be 1
-       b: 1,         // Wrong - should be 2
-       c: 3          // Doesn't exist in response
+
+      a: 1,
+      b: 2,
 
     });
   });

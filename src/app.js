@@ -20,7 +20,7 @@ const pino = require('pino-http')({
 // Create an express app instance we can use to attach middleware and HTTP routes
 const app = express();
 
-const { createSuccessResponse, createErrorResponse } = require('../src/response');
+const {  createErrorResponse } = require('../src/response');
 
 
 // Use pino logging middleware

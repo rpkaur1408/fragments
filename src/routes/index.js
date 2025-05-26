@@ -1,5 +1,5 @@
 // src/routes/index.js
-const { createSuccessResponse, createErrorResponse } = require('../response');
+const { createSuccessResponse} = require('../response');
 const express = require('express');
 
 // version and author from package.json
