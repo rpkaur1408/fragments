@@ -8,7 +8,7 @@ describe("GET /some-unknoenwn-endpoint", () => {
         expect(res.statusCode).toBe(404);
         expect(res.body.status).toEqual("error");
         expect(res.body.error.code).toEqual(404);
-        expect(res.body.error.message).toEqual("not found");
+        expect(res.body.error.message).toEqual("Not Found");
     }
     );
 })
