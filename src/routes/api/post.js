@@ -13,6 +13,7 @@ module.exports = async (req, res) => {
   try {
     ({ type } = contentType.parse(req));
   } catch (err) {
+    console.log(err)
     logger.error('Missing or invalid Content-Type header');
     return res.status(400).json({ status: 'error', message: 'Invalid Content-Type header' });
   }
