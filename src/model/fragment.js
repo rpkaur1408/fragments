@@ -142,7 +142,7 @@ class Fragment {
    try {
       const { type } = contentType.parse(value);
       return supportedTypes.includes(type);
-    } catch (err) {
+    } catch {
       return false;
     }
   }

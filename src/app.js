@@ -7,6 +7,8 @@ const compression = require('compression');
 const passport = require('passport');
 const authenticate = require('./auth');
 
+
+
 // author and version from our package.json file
 // TODO: make sure you have updated your name in the `author` section
 // const { author, version } = require('../package.json'); // Commenting to solve ESlint variable not used issue
@@ -37,6 +39,8 @@ app.use(compression());
 
 passport.use(authenticate.strategy());
 app.use(passport.initialize());
+
+app.use('/v1',require('./routes/api/v1'));
 
 // Define a simple health check route. If the server is running
 // we'll respond with a 200 OK.  If not, the server isn't healthy.
