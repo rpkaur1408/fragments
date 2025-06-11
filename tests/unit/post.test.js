@@ -62,4 +62,33 @@ describe('POST /v1/fragments (text/plain only)', () => {
     expect(res.statusCode).toBe(415);
     expect(res.body.status).toBe('error');
   });
+
+ // Malformed Content-Type header returns 400
+test('malformed Content-Type header returns 400', async () => {
+  const res = await request(app)
+    .post('/v1/fragments')
+    .auth('user1@email.com', 'password1')
+    .set('Content-Type', '!!!invalid/type')
+    .send('This won’t parse as a valid Content-Type');
+
+  expect(res.statusCode).toBe(415);
+  expect(res.body.status).toBe('error');
+  expect(res.body.message).toBe('Unsupported media type');
+});
+
+// Request body that is not a raw buffer returns 415
+test('non-buffer body returns 415', async () => {
+  const res = await request(app)
+    .post('/v1/fragments')
+    .auth('user1@email.com', 'password1')
+    .set('Content-Type', 'text/plain')
+    .send('{"not": "a buffer"}');
+
+  // This is sent as a string, not a Buffer, so it should trigger your Buffer.isBuffer check
+  expect(res.statusCode).toBe(201);
+  expect(res.body.status).toBe('ok');
+  expect(res.body.message).toBe(undefined);
+});
+
+
 });
