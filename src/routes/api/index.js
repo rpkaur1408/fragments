@@ -7,6 +7,8 @@ const express = require('express');
 const { Fragment } = require('../../model/fragment');
 const contentType = require('content-type');
 
+const { getFragments, getFragmentById } = require('./get');
+
 const rawBody = () =>
   express.raw({
     inflate: true,
@@ -24,7 +26,8 @@ const router = express.Router();
 
 // Mount versioned routes at /v1
 // router.use('/v1', require('./v1-9'));
-router.get("/fragments", require('./get'));
+router.get("/fragments",getFragments);
+router.get('/fragments/:id', getFragmentById);
 router.post('/fragments', rawBody(), require('./post'));
 
 module.exports = router;

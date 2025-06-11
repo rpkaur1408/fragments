@@ -57,8 +57,7 @@ class Fragment {
    * @returns Promise<Fragment>
    */
   static async byId(ownerId, id) {
-    // TODO
-    // TIP: make sure you properly re-create a full Fragment instance after getting from db.
+
      const metadata = await readFragment(ownerId, id);
     if (!metadata) throw new Error('Fragment not found');
     return new Fragment(metadata);
@@ -97,8 +96,6 @@ class Fragment {
    * @returns Promise<void>
    */
   async setData(data) {
-    // TODO
-    // TIP: make sure you update the metadata whenever you change the data, so they match
 
     if (!Buffer.isBuffer(data)) throw new Error('Data must be a Buffer');
     this.size = data.length;
