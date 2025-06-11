@@ -1,5 +1,3 @@
-const path = require('path');
-
 describe('Logger Configuration', () => {
   let originalEnv;
 
