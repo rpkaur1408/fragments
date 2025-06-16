@@ -1,7 +1,5 @@
 # fragments
 
-## Week 1 
-
 ### Command	Description
 
 npm start	 -->  Run production server

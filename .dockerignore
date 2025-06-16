@@ -1,0 +1,16 @@
+# If we don't specify any files to ignore, Docker will send everything from this directory down to the Docker Daemon.
+
+.github/
+.vscode/
+coverage/
+node_modules/
+tests/
+.env
+eslint.config.mjs
+.git/
+.gitignore
+.prettier*
+jest*
+
+tests/
+!tests/.htpasswd

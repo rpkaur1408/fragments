@@ -1,64 +1,105 @@
 const MemoryDB = require('./memory-db');
-
+const logger = require('../../../logger');
 
 // Create two in-memory databases: one for fragment metadata and the other for raw data
 const data = new MemoryDB();
 const metadata = new MemoryDB();
 
-// Write a fragment's metadata to memory db. Returns a Promise<void>
+logger.info('Initialized in-memory databases for fragments');
+
+/**
+ * Write a fragment's metadata to memory db
+ * @param {Object} fragment
+ * @returns {Promise<void>}
+ */
 function writeFragment(fragment) {
-  // Simulate db/network serialization of the value, storing only JSON representation.
-  // This is important because it's how things will work later with AWS data stores.
   const serialized = JSON.stringify(fragment);
+  logger.debug({ fragmentId: fragment.id, ownerId: fragment.ownerId }, 'Writing fragment metadata');
   return metadata.put(fragment.ownerId, fragment.id, serialized);
 }
 
-// Read a fragment's metadata from memory db. Returns a Promise<Object>
+/**
+ * Read a fragment's metadata from memory db
+ * @param {string} ownerId
+ * @param {string} id
+ * @returns {Promise<Object>}
+ */
 async function readFragment(ownerId, id) {
-  // NOTE: this data will be raw JSON, we need to turn it back into an Object.
-  // You'll need to take care of converting this back into a Fragment instance
-  // higher up in the callstack.
+  logger.debug({ ownerId, fragmentId: id }, 'Reading fragment metadata');
   const serialized = await metadata.get(ownerId, id);
-  return typeof serialized === 'string' ? JSON.parse(serialized) : serialized;
+
+  if (serialized) {
+    logger.debug({ ownerId, fragmentId: id }, 'Fragment metadata found');
+    return typeof serialized === 'string' ? JSON.parse(serialized) : serialized;
+  } else {
+    logger.warn({ ownerId, fragmentId: id }, 'Fragment metadata not found');
+    return null;
+  }
 }
 
-// Write a fragment's data buffer to memory db. Returns a Promise
+/**
+ * Write a fragment's data buffer to memory db
+ * @param {string} ownerId
+ * @param {string} id
+ * @param {Buffer} buffer
+ * @returns {Promise<void>}
+ */
 function writeFragmentData(ownerId, id, buffer) {
+  logger.debug({ ownerId, fragmentId: id }, 'Writing fragment data');
   return data.put(ownerId, id, buffer);
 }
 
-// Read a fragment's data from memory db. Returns a Promise
+/**
+ * Read a fragment's data buffer from memory db
+ * @param {string} ownerId
+ * @param {string} id
+ * @returns {Promise<Buffer>}
+ */
 function readFragmentData(ownerId, id) {
+  logger.debug({ ownerId, fragmentId: id }, 'Reading fragment data');
   return data.get(ownerId, id);
 }
 
-// Get a list of fragment ids/objects for the given user from memory db. Returns a Promise
+/**
+ * List fragments for a given user
+ * @param {string} ownerId
+ * @param {boolean} expand
+ * @returns {Promise<Array>}
+ */
 async function listFragments(ownerId, expand = false) {
+  logger.debug({ ownerId, expand }, 'Listing fragments');
   const fragments = await metadata.query(ownerId);
-  const parsedFragments = fragments.map((fragment) => JSON.parse(fragment));
 
-  // If we don't get anything back, or are supposed to give expanded fragments, return
-  if (expand || !fragments) {
-    return parsedFragments;
+  if (!fragments || fragments.length === 0) {
+    logger.info({ ownerId }, 'No fragments found for user');
+    return [];
   }
 
-  // Otherwise, map to only send back the ids
-  return parsedFragments.map((fragment) => fragment.id);
+  const parsedFragments = fragments.map((fragment) => JSON.parse(fragment));
+
+  return expand ? parsedFragments : parsedFragments.map((fragment) => fragment.id);
 }
 
-// Delete a fragment's metadata and data from memory db. Returns a Promise
+/**
+ * Delete a fragment's metadata and data
+ * @param {string} ownerId
+ * @param {string} id
+ * @returns {Promise<void>}
+ */
 function deleteFragment(ownerId, id) {
+  logger.info({ ownerId, fragmentId: id }, 'Deleting fragment metadata and data');
   return Promise.all([
-    // Delete metadata
     metadata.del(ownerId, id),
-    // Delete data
     data.del(ownerId, id),
   ]);
 }
 
-module.exports.listFragments = listFragments;
-module.exports.writeFragment = writeFragment;
-module.exports.readFragment = readFragment;
-module.exports.writeFragmentData = writeFragmentData;
-module.exports.readFragmentData = readFragmentData;
-module.exports.deleteFragment = deleteFragment;
+// Exported methods
+module.exports = {
+  listFragments,
+  writeFragment,
+  readFragment,
+  writeFragmentData,
+  readFragmentData,
+  deleteFragment,
+};

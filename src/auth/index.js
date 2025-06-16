@@ -1,28 +1,42 @@
-// src/auth/index.js
+const logger = require('../logger');
 
-// Make sure our env isn't configured for both AWS Cognito and HTTP Basic Auth.
-// We can only do one or the other.  If your .env file contains all 3 of these
-// variables, something is wrong.  It should have AWS_COGNITO_POOL_ID and
-// AWS_COGNITO_CLIENT_ID together OR HTPASSWD_FILE on its own.
-if (
-  process.env.AWS_COGNITO_POOL_ID &&
-  process.env.AWS_COGNITO_CLIENT_ID &&
-  process.env.HTPASSWD_FILE
-) {
+// Validate environment variables to prevent conflicting configurations
+const usingCognito =
+  process.env.AWS_COGNITO_POOL_ID && process.env.AWS_COGNITO_CLIENT_ID;
+const usingBasicAuth = process.env.HTPASSWD_FILE;
+
+// Log environment mode and configuration intent
+logger.debug(
+  {
+    NODE_ENV: process.env.NODE_ENV,
+    usingCognito,
+    usingBasicAuth,
+  },
+  'Initializing authentication module with environment configuration'
+);
+
+// Conflict: Both Cognito and Basic Auth are configured
+if (usingCognito && usingBasicAuth) {
+  logger.error(
+    'Configuration conflict: Both AWS Cognito and HTTP Basic Auth are enabled. Only one is allowed.'
+  );
   throw new Error(
     'env contains configuration for both AWS Cognito and HTTP Basic Auth. Only one is allowed.'
   );
 }
 
-// Prefer Amazon Cognito (production)
-if (process.env.AWS_COGNITO_POOL_ID && process.env.AWS_COGNITO_CLIENT_ID) {
+// Use Cognito if configured
+if (usingCognito) {
+  logger.info('Authentication strategy selected: AWS Cognito');
   module.exports = require('./cognito');
 }
-// Also allow for an .htpasswd file to be used, but not in production
-else if (process.env.HTPASSWD_FILE && process.NODE_ENV !== 'production') {
+// Use Basic Auth if configured and not in production
+else if (usingBasicAuth && process.env.NODE_ENV !== 'production') {
+  logger.info('Authentication strategy selected: HTTP Basic Auth');
   module.exports = require('./basic-auth');
 }
-// In all other cases, we need to stop now and fix our config
+// No valid configuration found
 else {
+  logger.error('No valid authentication strategy found in environment variables');
   throw new Error('missing env vars: no authorization configuration found');
 }

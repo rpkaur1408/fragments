@@ -12,48 +12,52 @@ module.exports = async (req, res) => {
   // Parse the Content-Type header
   try {
     ({ type } = contentType.parse(req));
+    logger.debug({ user: req.user, type }, 'Parsed Content-Type header');
   } catch (err) {
-    console.log(err)
-    logger.error('Missing or invalid Content-Type header');
+    logger.error({ err: err.message, path: req.path }, 'Missing or invalid Content-Type header');
     return res.status(400).json({ status: 'error', message: 'Invalid Content-Type header' });
   }
 
-  logger.debug(`Content-Type: ${type}`);
-
   // Check that body is a Buffer
   if (!Buffer.isBuffer(req.body)) {
-    logger.error('Request body is not a buffer');
+    logger.error({ user: req.user, path: req.path }, 'Request body is not a buffer');
     return res.status(415).json({ status: 'error', message: 'Unsupported media type' });
   }
 
   // Check that the type is supported (we're only doing text/plain)
   if (!Fragment.isSupportedType(type)) {
-    logger.warn(`Unsupported content-type: ${type}`);
+    logger.warn({ user: req.user, type }, 'Unsupported content-type');
     return res.status(415).json({ status: 'error', message: 'Unsupported content type' });
   }
 
-  // Create and save the fragment
-  const fragment = new Fragment({
-    ownerId: req.user,
-    type,
-    size: req.body.length,
-  });
+  try {
+    const fragment = new Fragment({
+      ownerId: req.user,
+      type,
+      size: req.body.length,
+    });
 
-  await fragment.save();
-  await fragment.setData(req.body);
+    logger.info({ user: req.user, fragmentId: fragment.id }, 'Creating new fragment');
 
-  const location = `${req.protocol}://${req.headers.host}/v1/fragments/${fragment.id}`;
+    await fragment.save();
+    await fragment.setData(req.body);
 
-  // Send success response
-  res.status(201).location(location).json({
-    status: 'ok',
-    fragment: {
-      id: fragment.id,
-      ownerId: fragment.ownerId,
-      created: fragment.created,
-      updated: fragment.updated,
-      type: fragment.type,
-      size: fragment.size,
-    },
-  });
+    const location = `${req.protocol}://${req.headers.host}/v1/fragments/${fragment.id}`;
+    logger.debug({ user: req.user, location }, 'Fragment created and stored');
+
+    res.status(201).location(location).json({
+      status: 'ok',
+      fragment: {
+        id: fragment.id,
+        ownerId: fragment.ownerId,
+        created: fragment.created,
+        updated: fragment.updated,
+        type: fragment.type,
+        size: fragment.size,
+      },
+    });
+  } catch (err) {
+    logger.error({ err: err.message, user: req.user }, 'Error while saving fragment');
+    res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+  }
 };
