@@ -121,6 +121,7 @@ class Fragment {
       return isSupported;
     } catch (err) {
       logger.warn({ value }, 'Failed to parse content-type');
+      logger.debug({ err }, 'Error parsing content-type');
       return false;
     }
   }
