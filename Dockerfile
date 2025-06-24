@@ -1,54 +1,53 @@
-# Dockerfile
-FROM node:22.12.0
+# ----------------------------
+# Stage 0: Base image with dependencies
+# ----------------------------
+FROM node:22.12.0-alpine AS dependencies
 
-# metadata about image
-# LABEL adds key value pairs to an image
+# Set environment variables
+ENV NODE_ENV=production \
+    NPM_CONFIG_LOGLEVEL=warn \
+    NPM_CONFIG_COLOR=false \
+    PORT=8080
 
-LABEL maintainer="Rehatpreet Kaur <rpkaur4@myseneca.ca>"
-LABEL description="Fragments node.js microservice"
-
-# Environment variables
-
-# We default to use port 8080 in our service
-ENV PORT=8080
-
-# Reduce npm spam when installing within Docker
-# https://docs.npmjs.com/cli/v8/using-npm/config#loglevel
-ENV NPM_CONFIG_LOGLEVEL=warn
-
-# Disable colour when run inside Docker
-# https://docs.npmjs.com/cli/v8/using-npm/config#color
-ENV NPM_CONFIG_COLOR=false
-
-
-# Use /app as our working directory
+# Create app directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json to the working directory
+# Copy package files and install only production dependencies
+COPY package*.json ./
+RUN npm ci --only=production
 
-# files into /app. NOTE: the trailing `/` on `/app/`, which tells Docker
-# that `app` is a directory and not a file.
-COPY package*.json /app/
+# ----------------------------
+# Stage 1: Build the app with all source files
+# ----------------------------
+FROM node:22.12.0-alpine AS builder
 
+WORKDIR /app
 
-# Install node dependencies defined in package-lock.json
-RUN npm install
+# Copy installed dependencies from the previous stage
+COPY --from=dependencies /app /app
 
-
-# Copy src to /app/src/
+# Copy source code
 COPY ./src ./src
-
-
-# Copy our HTPASSWD file
 COPY ./tests/.htpasswd ./tests/.htpasswd
 
+# If you have any build steps (optional, e.g. transpiling), add them here
+# RUN npm run build
 
+# ----------------------------
+# Stage 2: Final runtime container
+# ----------------------------
+FROM node:22.12.0-alpine AS final
 
+ENV NODE_ENV=production \
+    PORT=8080
 
+WORKDIR /app
 
-# Start the container by running our server
-CMD npm start
+# Copy only necessary files from builder
+COPY --from=builder /app /app
 
-
-# We run our service on port 8080
+# Expose app port
 EXPOSE 8080
+
+# Run the app
+CMD ["npm", "start"]
