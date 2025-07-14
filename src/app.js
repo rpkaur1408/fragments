@@ -11,6 +11,11 @@ const { createErrorResponse } = require('./response');
 // Create an express app instance
 const app = express();
 
+// Configure JSON formatting for pretty output in development
+if (process.env.NODE_ENV !== 'production') {
+  app.set('json spaces', 2);
+}
+
 // Structured logging middleware (Pino)
 app.use(pino);
 logger.info('Pino HTTP logger initialized');

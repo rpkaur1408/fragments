@@ -1,6 +1,7 @@
 const { randomUUID } = require('crypto');
 const contentType = require('content-type');
 const logger = require('../logger');
+const MarkdownIt = require('markdown-it');
 
 const supportedTypes = ['text/plain', 'text/markdown', 'text/html', 'application/json'];
 
@@ -111,6 +112,121 @@ class Fragment {
 
   get formats() {
     return [this.mimeType];
+  }
+
+  /**
+   * Convert fragment to a different format based on file extension
+   * @param {string} extension - The file extension (e.g., '.txt', '.html', '.md')
+   * @returns {Promise<Buffer>} - The converted data
+   */
+  async getConvertedInto(extension) {
+    const data = await this.getData();
+    
+    switch (extension.toLowerCase()) {
+      case '.txt':
+        if (this.mimeType === 'text/plain') {
+          return data;
+        }
+        if (this.mimeType === 'text/markdown') {
+          // For now, just return the raw data as text
+          // In a real implementation, you might want to strip markdown formatting
+          return data;
+        }
+        if (this.mimeType === 'text/html') {
+          // Strip HTML tags for plain text conversion
+          const htmlString = data.toString('utf8');
+          const textContent = htmlString.replace(/<[^>]*>/g, '');
+          return Buffer.from(textContent, 'utf8');
+        }
+        if (this.mimeType === 'application/json') {
+          // Convert JSON to readable text
+          const jsonString = data.toString('utf8');
+          const parsed = JSON.parse(jsonString);
+          return Buffer.from(JSON.stringify(parsed, null, 2), 'utf8');
+        }
+        throw new Error('Cannot convert to plain text');
+        
+      case '.html':
+        if (this.mimeType === 'text/html') {
+          return data;
+        }
+        if (this.mimeType === 'text/markdown') {
+          // Use markdown-it for proper Markdown to HTML conversion
+          const md = new MarkdownIt();
+          const markdownContent = data.toString('utf8');
+          const htmlContent = md.render(markdownContent);
+          const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Converted Markdown</title>
+</head>
+<body>
+${htmlContent}
+</body>
+</html>`;
+          return Buffer.from(fullHtml, 'utf8');
+        }
+        if (this.mimeType === 'text/plain') {
+          // Convert plain text to HTML
+          const textContent = data.toString('utf8');
+          const htmlContent = `<html><body><pre>${textContent}</pre></body></html>`;
+          return Buffer.from(htmlContent, 'utf8');
+        }
+        if (this.mimeType === 'application/json') {
+          // Convert JSON to formatted HTML
+          const jsonString = data.toString('utf8');
+          const parsed = JSON.parse(jsonString);
+          const formattedJson = JSON.stringify(parsed, null, 2);
+          const htmlContent = `<html><body><pre>${formattedJson}</pre></body></html>`;
+          return Buffer.from(htmlContent, 'utf8');
+        }
+        throw new Error('Cannot convert to HTML');
+        
+      case '.md':
+        if (this.mimeType === 'text/markdown') {
+          return data;
+        }
+        if (this.mimeType === 'text/plain') {
+          // Convert plain text to markdown (just wrap in code block)
+          const textContent = data.toString('utf8');
+          const markdownContent = `\`\`\`\n${textContent}\n\`\`\``;
+          return Buffer.from(markdownContent, 'utf8');
+        }
+        if (this.mimeType === 'text/html') {
+          // Convert HTML to markdown (basic conversion)
+          const htmlString = data.toString('utf8');
+          const textContent = htmlString.replace(/<[^>]*>/g, '');
+          const markdownContent = `\`\`\`\n${textContent}\n\`\`\``;
+          return Buffer.from(markdownContent, 'utf8');
+        }
+        throw new Error('Cannot convert to Markdown');
+        
+      case '.json':
+        if (this.mimeType === 'application/json') {
+          return data;
+        }
+        if (this.mimeType === 'text/plain') {
+          // Try to parse as JSON, if it fails, wrap in quotes
+          const textContent = data.toString('utf8');
+          try {
+            JSON.parse(textContent);
+            return data; // Already valid JSON
+          } catch {
+            // Wrap in quotes to make it a valid JSON string
+            return Buffer.from(JSON.stringify(textContent), 'utf8');
+          }
+        }
+        if (this.mimeType === 'text/markdown' || this.mimeType === 'text/html') {
+          // Convert to JSON by wrapping content in quotes
+          const content = data.toString('utf8');
+          return Buffer.from(JSON.stringify(content), 'utf8');
+        }
+        throw new Error('Cannot convert to JSON');
+        
+      default:
+        throw new Error(`Unsupported conversion to ${extension}`);
+    }
   }
 
   static isSupportedType(value) {

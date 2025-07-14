@@ -14,3 +14,7 @@ npm run lint	-->  Check code quality
 ### Health Check Endpoint
 
 curl http://localhost:8080
+
+### To run docker by including env
+
+docker run --rm --name fragments --env-file .env fragments:latest

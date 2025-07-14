@@ -6,7 +6,7 @@ const { Fragment } = require('../../model/fragment');
 const contentType = require('content-type');
 const logger = require('../../logger');
 
-const { getFragments, getFragmentById } = require('./get');
+const { getFragments, getFragmentById, getFragmentInfo } = require('./get');
 
 // Middleware to parse raw body for supported content types
 const rawBody = () =>
@@ -38,6 +38,11 @@ router.get('/fragments', (req, res, next) => {
 router.get('/fragments/:id', (req, res, next) => {
   logger.info({ method: 'GET', path: `/fragments/${req.params.id}` }, 'Received request');
   getFragmentById(req, res, next);
+});
+
+router.get('/fragments/:id/info', (req, res, next) => {
+  logger.info({ method: 'GET', path: `/fragments/${req.params.id}/info` }, 'Received request');
+  getFragmentInfo(req, res, next);
 });
 
 router.post('/fragments', rawBody(), (req, res, next) => {
