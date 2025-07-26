@@ -4,13 +4,14 @@
 .vscode/
 coverage/
 node_modules/
+
+# Exclude tests but allow .htpasswd file
 tests/
-.env
+!tests/.htpasswd
+
 eslint.config.mjs
 .git/
 .gitignore
 .prettier*
 jest*
 
-tests/
-!tests/.htpasswd

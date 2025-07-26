@@ -25,6 +25,11 @@ if (usingCognito && usingBasicAuth) {
   );
 }
 
+console.log('usingCognito', usingCognito);
+console.log('usingBasicAuth', usingBasicAuth);
+console.log('process.env.NODE_ENV', process.env.NODE_ENV);
+
+
 // Use Cognito if configured
 if (usingCognito) {
   logger.info('Authentication strategy selected: AWS Cognito');

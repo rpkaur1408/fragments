@@ -117,16 +117,16 @@ describe('POST /v1/fragments', () => {
 
   // Test malformed Content-Type header
   test('malformed Content-Type header returns 415', async () => {
-    const res = await request(app)
-      .post('/v1/fragments')
-      .auth('user1@email.com', 'password1')
-      .set('Content-Type', '!!!invalid/type')
+  const res = await request(app)
+    .post('/v1/fragments')
+    .auth('user1@email.com', 'password1')
+    .set('Content-Type', '!!!invalid/type')
       .send('This won\'t parse as a valid Content-Type');
 
-    expect(res.statusCode).toBe(415);
-    expect(res.body.status).toBe('error');
-    expect(res.body.message).toBe('Unsupported media type');
-  });
+  expect(res.statusCode).toBe(415);
+  expect(res.body.status).toBe('error');
+  expect(res.body.message).toBe('Unsupported media type');
+});
 
   // Test content types with charset
   test('content type with charset is supported', async () => {
@@ -158,14 +158,14 @@ describe('POST /v1/fragments', () => {
   // Test large content
   test('large content is accepted', async () => {
     const largeText = 'A'.repeat(1000);
-    const res = await request(app)
-      .post('/v1/fragments')
-      .auth('user1@email.com', 'password1')
-      .set('Content-Type', 'text/plain')
+  const res = await request(app)
+    .post('/v1/fragments')
+    .auth('user1@email.com', 'password1')
+    .set('Content-Type', 'text/plain')
       .send(largeText);
 
-    expect(res.statusCode).toBe(201);
-    expect(res.body.status).toBe('ok');
+  expect(res.statusCode).toBe(201);
+  expect(res.body.status).toBe('ok');
     expect(res.body.fragment.size).toBe(1000);
   });
 
