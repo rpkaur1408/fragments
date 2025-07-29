@@ -44,7 +44,12 @@
                 {
                     "name": "AWS_COGNITO_CLIENT_ID",
                     "value": "5lsu19afmc8e56aprkprfk82d6"
+                },
+                {
+                    "name": "AWS_S3_BUCKET_NAME",
+                    "value": "rpkaur4-fragments"
                 }
+
             ],
             "environmentFiles": [],
             "mountPoints": [],

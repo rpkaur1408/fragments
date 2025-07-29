@@ -50,6 +50,11 @@ router.post('/fragments', rawBody(), (req, res, next) => {
   require('./post')(req, res, next);
 });
 
+router.delete('/fragments/:id', (req, res, next) => {
+  logger.info({ method: 'DELETE', path: `/fragments/${req.params.id}` }, 'Received request');
+  require('./delete')(req, res, next);
+});
+
 logger.info('API router initialized and routes mounted');
 
 module.exports = router;

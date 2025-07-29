@@ -71,7 +71,7 @@ class Fragment {
     return new Fragment(metadata);
   }
 
-  static delete(ownerId, id) {
+  static async delete(ownerId, id) {
     logger.info({ ownerId, id }, 'Deleting fragment');
     return deleteFragment(ownerId, id);
   }
