@@ -115,12 +115,20 @@ jobs:
       - name: Install node dependencies
         # NOTE: we need to install dev dependencies too vs. production only for hurl
         run: npm install
+      - name: Check Docker and Docker Compose
+        run: |
+          docker --version
+          docker compose version
       - name: Build Containers
+        run: docker compose build
+      - name: Start Containers
         run: docker compose up -d
       - name: Check container status
-        run: docker compose ps
-      - name: Check container logs
-        run: docker compose logs fragments
+        run: docker compose ps -a
+      - name: Check all container logs
+        run: docker compose logs
+      - name: Check fragments container logs specifically
+        run: docker compose logs fragments || echo "No fragments container logs found"
       - name: Wait for server to be ready
         run: |
           echo "Waiting for server to be ready..."
