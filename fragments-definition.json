@@ -48,8 +48,11 @@
                 {
                     "name": "AWS_S3_BUCKET_NAME",
                     "value": "rpkaur4"
+                },
+                {
+                    "name": "AWS_DYNAMODB_TABLE_NAME",
+                    "value": "fragments"
                 }
-
             ],
             "environmentFiles": [],
             "mountPoints": [],

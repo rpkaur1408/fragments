@@ -1,15 +1,10 @@
-// XXX: temporary use of memory-db until we add DynamoDB
 const logger = require('../../../logger');
 const s3Client = require('./s3Client');
 const ddbDocClient = require('./ddbDocClient');
 const { PutCommand, GetCommand, QueryCommand, DeleteCommand } = require('@aws-sdk/lib-dynamodb');
-const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { DeleteObjectCommand, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 
-// Create two in-memory databases: one for fragment metadata and the other for raw data
-
-const metadata = new MemoryDB();
-
-logger.info('Initialized in-memory databases for fragments');
+logger.info('Initialized AWS DynamoDB and S3 clients for fragments');
 
 /**
  * Write a fragment's metadata to memory db
