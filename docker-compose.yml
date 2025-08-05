@@ -11,7 +11,10 @@ services:
             # Our API will be running on http://localhost:8080
             - API_URL=http://localhost:8080
             # Use Basic Auth (for running tests, CI)
-            - HTPASSWD_FILE=tests/.htpasswd
+            # - HTPASSWD_FILE=tests/.htpasswd
+            - AWS_COGNITO_POOL_ID=us-east-1_wqn2LAm1k
+            - AWS_COGNITO_CLIENT_ID=5lsu19afmc8e56aprkprfk82d6
+
             # Use the LOG_LEVEL set in the host environment, or default to info
             - LOG_LEVEL=${LOG_LEVEL:-info}
             - AWS_REGION=us-east-1
@@ -52,3 +55,4 @@ services:
       # https://hub.docker.com/r/localstack/localstack for config details.
       # We only want to run S3
       - SERVICES=s3
+      - DEFAULT_REGION=us-east-1

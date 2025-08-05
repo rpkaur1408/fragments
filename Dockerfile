@@ -12,9 +12,9 @@ ENV NODE_ENV=development \
 # Create app directory
 WORKDIR /app
 
-# Copy package files and install only production dependencies
+# Copy package files and install only development dependencies
 COPY package*.json ./
-RUN NODE_ENV=development npm ci --only=production && npm cache clean --force
+RUN NODE_ENV=development npm ci --only=development && npm cache clean --force
 
 # ----------------------------
 # Stage 1: Build the app with all source files

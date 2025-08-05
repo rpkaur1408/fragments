@@ -47,7 +47,7 @@
                 },
                 {
                     "name": "AWS_S3_BUCKET_NAME",
-                    "value": "rpkaur4-fragments"
+                    "value": "rpkaur4"
                 }
 
             ],

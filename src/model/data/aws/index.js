@@ -1,8 +1,8 @@
 // XXX: temporary use of memory-db until we add DynamoDB
-const MemoryDB = require('../memory/memory-db');
 const logger = require('../../../logger');
 const s3Client = require('./s3Client');
-const { PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const ddbDocClient = require('./ddbDocClient');
+const { PutCommand, GetCommand, QueryCommand, DeleteCommand } = require('@aws-sdk/lib-dynamodb');
 const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 // Create two in-memory databases: one for fragment metadata and the other for raw data
@@ -16,10 +16,23 @@ logger.info('Initialized in-memory databases for fragments');
  * @param {Object} fragment
  * @returns {Promise<void>}
  */
+// Writes a fragment to DynamoDB. Returns a Promise.
 function writeFragment(fragment) {
-  const serialized = JSON.stringify(fragment);
-  logger.debug({ fragmentId: fragment.id, ownerId: fragment.ownerId }, 'Writing fragment metadata');
-  return metadata.put(fragment.ownerId, fragment.id, serialized);
+  // Configure our PUT params, with the name of the table and item (attributes and keys)
+  const params = {
+    TableName: process.env.AWS_DYNAMODB_TABLE_NAME,
+    Item: fragment,
+  };
+
+  // Create a PUT command to send to DynamoDB
+  const command = new PutCommand(params);
+
+  try {
+    return ddbDocClient.send(command);
+  } catch (err) {
+    logger.warn({ err, params, fragment }, 'error writing fragment to DynamoDB');
+    throw err;
+  }
 }
 
 /**
@@ -28,19 +41,28 @@ function writeFragment(fragment) {
  * @param {string} id
  * @returns {Promise<Object>}
  */
+// Reads a fragment from DynamoDB. Returns a Promise<fragment|undefined>
 async function readFragment(ownerId, id) {
-  logger.debug({ ownerId, fragmentId: id }, 'Reading fragment metadata');
-  const serialized = await metadata.get(ownerId, id);
+  // Configure our GET params, with the name of the table and key (partition key + sort key)
+  const params = {
+    TableName: process.env.AWS_DYNAMODB_TABLE_NAME,
+    Key: { ownerId, id },
+  };
 
-  if (serialized) {
-    logger.debug({ ownerId, fragmentId: id }, 'Fragment metadata found');
-    return typeof serialized === 'string' ? JSON.parse(serialized) : serialized;
-  } else {
-    logger.warn({ ownerId, fragmentId: id }, 'Fragment metadata not found');
-    return null;
+  // Create a GET command to send to DynamoDB
+  const command = new GetCommand(params);
+
+  try {
+    // Wait for the data to come back from AWS
+    const data = await ddbDocClient.send(command);
+    // We may or may not get back any data (e.g., no item found for the given key).
+    // If we get back an item (fragment), we'll return it.  Otherwise we'll return `undefined`.
+    return data?.Item;
+  } catch (err) {
+    logger.warn({ err, params }, 'error reading fragment from DynamoDB');
+    throw err;
   }
 }
-
 /**
  * Write a fragment's data buffer to memory db
  * @param {string} ownerId
@@ -130,18 +152,44 @@ async function readFragmentData(ownerId, id) {
  * @param {boolean} expand
  * @returns {Promise<Array>}
  */
+// Get a list of fragments, either ids-only, or full Objects, for the given user.
+// Returns a Promise<Array<Fragment>|Array<string>|undefined>
 async function listFragments(ownerId, expand = false) {
-  logger.debug({ ownerId, expand }, 'Listing fragments');
-  const fragments = await metadata.query(ownerId);
+  // Configure our QUERY params, with the name of the table and the query expression
+  const params = {
+    TableName: process.env.AWS_DYNAMODB_TABLE_NAME,
+    // Specify that we want to get all items where the ownerId is equal to the
+    // `:ownerId` that we'll define below in the ExpressionAttributeValues.
+    KeyConditionExpression: 'ownerId = :ownerId',
+    // Use the `ownerId` value to do the query
+    ExpressionAttributeValues: {
+      ':ownerId': ownerId,
+    },
+  };
 
-  if (!fragments || fragments.length === 0) {
-    logger.info({ ownerId }, 'No fragments found for user');
-    return [];
+  // Limit to only `id` if we aren't supposed to expand. Without doing this
+  // we'll get back every attribute.  The projection expression defines a list
+  // of attributes to return, see:
+  // https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ProjectionExpressions.html
+  if (!expand) {
+    params.ProjectionExpression = 'id';
   }
 
-  const parsedFragments = fragments.map((fragment) => JSON.parse(fragment));
+  // Create a QUERY command to send to DynamoDB
+  const command = new QueryCommand(params);
 
-  return expand ? parsedFragments : parsedFragments.map((fragment) => fragment.id);
+  try {
+    // Wait for the data to come back from AWS
+    const data = await ddbDocClient.send(command);
+
+    // If we haven't expanded to include all attributes, remap this array from
+    // [ {"id":"b9e7a264-630f-436d-a785-27f30233faea"}, {"id":"dad25b07-8cd6-498b-9aaf-46d358ea97fe"} ,... ] to
+    // [ "b9e7a264-630f-436d-a785-27f30233faea", "dad25b07-8cd6-498b-9aaf-46d358ea97fe", ... ]
+    return !expand ? data?.Items.map((item) => item.id) : data?.Items
+  } catch (err) {
+    logger.error({ err, params }, 'error getting all fragments for user from DynamoDB');
+    throw err;
+  }
 }
 
 /**
@@ -153,8 +201,23 @@ async function listFragments(ownerId, expand = false) {
 async function deleteFragment(ownerId, id) {
   logger.info({ ownerId, fragmentId: id }, 'Deleting fragment metadata and data');
   
-  // Delete metadata from memory db
-  const metadataPromise = metadata.del(ownerId, id);
+  // Delete metadata from DynamoDB
+  const ddbParams = {
+    TableName: process.env.AWS_DYNAMODB_TABLE_NAME,
+    Key: { ownerId, id },
+  };
+  
+  const ddbCommand = new DeleteCommand(ddbParams);
+  
+  try {
+    // Delete from DynamoDB
+    await ddbDocClient.send(ddbCommand);
+    logger.debug({ ownerId, fragmentId: id }, 'Fragment metadata deleted from DynamoDB');
+  } catch (err) {
+    logger.error({ err, params: ddbParams }, 'Error deleting fragment metadata from DynamoDB');
+    // Don't throw error here as we still want to delete data
+    // DynamoDB might return 404 if item doesn't exist, which is fine for deletion
+  }
   
   // Delete data from S3
   const s3Params = {
@@ -174,9 +237,6 @@ async function deleteFragment(ownerId, id) {
     // Don't throw error here as we still want to delete metadata
     // S3 might return 404 if object doesn't exist, which is fine for deletion
   }
-  
-  // Wait for metadata deletion to complete
-  await metadataPromise;
   
   logger.info({ ownerId, fragmentId: id }, 'Fragment metadata and data deleted successfully');
 }
