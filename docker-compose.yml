@@ -12,8 +12,8 @@ services:
             - API_URL=http://localhost:8080
             # Use Basic Auth (for running tests, CI)
             - HTPASSWD_FILE=tests/.htpasswd
-            # - AWS_COGNITO_POOL_ID=us-east-1_wqn2LAm1k
-            # - AWS_COGNITO_CLIENT_ID=5lsu19afmc8e56aprkprfk82d6
+            - AWS_COGNITO_POOL_ID=us-east-1_wqn2LAm1k
+            - AWS_COGNITO_CLIENT_ID=5lsu19afmc8e56aprkprfk82d6
 
             # Use the LOG_LEVEL set in the host environment, or default to info
             - LOG_LEVEL=${LOG_LEVEL:-info}

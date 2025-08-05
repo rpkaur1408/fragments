@@ -135,15 +135,17 @@ jobs:
           export AWS_DYNAMODB_TABLE_NAME=fragments
           export HTPASSWD_FILE=tests/.htpasswd
           export LOG_LEVEL=debug
+          export AWS_ACCESS_KEY_ID=test
+          export AWS_SECRET_ACCESS_KEY=test
+          export AWS_SESSION_TOKEN=test
+          export AWS_REGION=us-east-1
+          export NODE_ENV=development
           npm start &
           echo "Server started with PID $!"
+          sleep 5
       - name: Wait for server to be ready
         run: |
           echo "Waiting for server to be ready..."
           timeout 60 bash -c 'until curl -f http://localhost:8080; do sleep 2; done'
-      - name: Make script executable
-        run: chmod +x ./scripts/local-aws-setup.sh
-      - name: Setup Local AWS Resources
-        run: ./scripts/local-aws-setup.sh
       - name: Run Hurl Tests
         run: npm run test:integration
