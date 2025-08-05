@@ -117,6 +117,14 @@ jobs:
         run: npm install
       - name: Build Containers
         run: docker compose up -d
+      - name: Check container status
+        run: docker compose ps
+      - name: Check container logs
+        run: docker compose logs fragments
+      - name: Wait for server to be ready
+        run: |
+          echo "Waiting for server to be ready..."
+          timeout 60 bash -c 'until curl -f http://localhost:8080; do sleep 2; done'
       - name: Make script executable
         run: chmod +x ./scripts/local-aws-setup.sh
       - name: Setup Local AWS Resources
