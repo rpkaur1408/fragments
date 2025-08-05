@@ -11,7 +11,7 @@ services:
             # Our API will be running on http://localhost:8080
             - API_URL=http://localhost:8080
             # Use Basic Auth (for running tests, CI)
-            # - HTPASSWD_FILE=tests/.htpasswd
+            - HTPASSWD_FILE=tests/.htpasswd
             - AWS_COGNITO_POOL_ID=us-east-1_wqn2LAm1k
             - AWS_COGNITO_CLIENT_ID=5lsu19afmc8e56aprkprfk82d6
 
