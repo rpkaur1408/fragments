@@ -2,8 +2,27 @@ const { randomUUID } = require('crypto');
 const contentType = require('content-type');
 const logger = require('../logger');
 const MarkdownIt = require('markdown-it');
+const sharp = require('sharp');
+const yaml = require('js-yaml');
+const { parse: csvParse } = require('csv-parse/sync');
+const { stringify: csvStringify } = require('csv-stringify/sync');
 
-const supportedTypes = ['text/plain', 'text/markdown', 'text/html', 'application/json'];
+const supportedTypes = [
+  // Text types
+  'text/plain', 
+  'text/markdown', 
+  'text/html', 
+  'text/csv',
+  // Data types
+  'application/json',
+  'application/yaml',
+  // Image types
+  'image/png',
+  'image/jpeg', 
+  'image/webp',
+  'image/avif',
+  'image/gif'
+];
 
 const {
   readFragment,
@@ -116,116 +135,265 @@ class Fragment {
 
   /**
    * Convert fragment to a different format based on file extension
-   * @param {string} extension - The file extension (e.g., '.txt', '.html', '.md')
+   * @param {string} extension - The file extension (e.g., '.txt', '.html', '.md', '.png', etc.)
    * @returns {Promise<Buffer>} - The converted data
    */
   async getConvertedInto(extension) {
     const data = await this.getData();
+    const ext = extension.toLowerCase();
     
-    switch (extension.toLowerCase()) {
-      case '.txt':
-        if (this.mimeType === 'text/plain') {
-          return data;
-        }
-        if (this.mimeType === 'text/markdown') {
-          // For now, just return the raw data as text
-          // In a real implementation, you might want to strip markdown formatting
-          return data;
-        }
-        if (this.mimeType === 'text/html') {
-          // Strip HTML tags for plain text conversion
-          const htmlString = data.toString('utf8');
-          const textContent = htmlString.replace(/<[^>]*>/g, '');
-          return Buffer.from(textContent, 'utf8');
-        }
-        if (this.mimeType === 'application/json') {
-          // Convert JSON to readable text
-          const jsonString = data.toString('utf8');
-          const parsed = JSON.parse(jsonString);
-          return Buffer.from(JSON.stringify(parsed, null, 2), 'utf8');
-        }
-        throw new Error('Cannot convert to plain text');
-        
-      case '.html':
-        if (this.mimeType === 'text/html') {
-          return data;
-        }
-        if (this.mimeType === 'text/markdown') {
-          // Use markdown-it for proper Markdown to HTML conversion
-          const md = new MarkdownIt();
-          const markdownContent = data.toString('utf8');
-          const htmlContent = md.render(markdownContent);
-          const fullHtml = `<!DOCTYPE html>
+    logger.debug({ from: this.mimeType, to: ext }, 'Converting fragment');
+    
+    try {
+      switch (ext) {
+        // TEXT CONVERSIONS
+        case '.txt':
+          return this._convertToText(data);
+          
+        case '.html':
+          return this._convertToHtml(data);
+          
+        case '.md':
+          return this._convertToMarkdown(data);
+          
+        // DATA CONVERSIONS
+        case '.json':
+          return this._convertToJson(data);
+          
+        case '.yaml':
+        case '.yml':
+          return this._convertToYaml(data);
+          
+        case '.csv':
+          return this._convertToCsv(data);
+          
+        // IMAGE CONVERSIONS
+        case '.png':
+          return this._convertToImage(data, 'png');
+          
+        case '.jpg':
+        case '.jpeg':
+          return this._convertToImage(data, 'jpeg');
+          
+        case '.webp':
+          return this._convertToImage(data, 'webp');
+          
+        case '.gif':
+          return this._convertToImage(data, 'gif');
+          
+        case '.avif':
+          return this._convertToImage(data, 'avif');
+          
+        default:
+          throw new Error(`Unsupported conversion to ${extension}`);
+      }
+    } catch (error) {
+      logger.error({ error: error.message, from: this.mimeType, to: ext }, 'Conversion failed');
+      throw error;
+    }
+  }
+
+  // TEXT CONVERSION HELPERS
+  _convertToText(data) {
+    switch (this.mimeType) {
+      case 'text/plain':
+        return data;
+      
+      case 'text/markdown':
+      case 'text/html':
+      case 'text/csv':
+        // Strip markup/formatting for plain text
+        const content = data.toString('utf8');
+        const cleanText = content.replace(/<[^>]*>/g, '').replace(/[*_`#]/g, '');
+        return Buffer.from(cleanText, 'utf8');
+      
+      case 'application/json':
+        const jsonString = data.toString('utf8');
+        const parsed = JSON.parse(jsonString);
+        return Buffer.from(JSON.stringify(parsed, null, 2), 'utf8');
+      
+      case 'application/yaml':
+        const yamlString = data.toString('utf8');
+        const yamlParsed = yaml.load(yamlString);
+        return Buffer.from(JSON.stringify(yamlParsed, null, 2), 'utf8');
+      
+      default:
+        throw new Error(`Cannot convert ${this.mimeType} to text`);
+    }
+  }
+
+  _convertToHtml(data) {
+    switch (this.mimeType) {
+      case 'text/html':
+        return data;
+      
+      case 'text/markdown':
+        const md = new MarkdownIt();
+        const markdownContent = data.toString('utf8');
+        const htmlContent = md.render(markdownContent);
+        return Buffer.from(`<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Converted Markdown</title>
+  <title>Converted Content</title>
 </head>
 <body>
 ${htmlContent}
 </body>
+</html>`, 'utf8');
+      
+      case 'text/plain':
+        const textContent = data.toString('utf8');
+        const htmlText = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Plain Text</title>
+</head>
+<body>
+  <pre>${textContent}</pre>
+</body>
 </html>`;
-          return Buffer.from(fullHtml, 'utf8');
-        }
-        if (this.mimeType === 'text/plain') {
-          // Convert plain text to HTML
-          const textContent = data.toString('utf8');
-          const htmlContent = `<html><body><pre>${textContent}</pre></body></html>`;
-          return Buffer.from(htmlContent, 'utf8');
-        }
-        if (this.mimeType === 'application/json') {
-          // Convert JSON to formatted HTML
-          const jsonString = data.toString('utf8');
-          const parsed = JSON.parse(jsonString);
-          const formattedJson = JSON.stringify(parsed, null, 2);
-          const htmlContent = `<html><body><pre>${formattedJson}</pre></body></html>`;
-          return Buffer.from(htmlContent, 'utf8');
-        }
-        throw new Error('Cannot convert to HTML');
-        
-      case '.md':
-        if (this.mimeType === 'text/markdown') {
-          return data;
-        }
-        if (this.mimeType === 'text/plain') {
-          // Convert plain text to markdown (just wrap in code block)
-          const textContent = data.toString('utf8');
-          const markdownContent = `\`\`\`\n${textContent}\n\`\`\``;
-          return Buffer.from(markdownContent, 'utf8');
-        }
-        if (this.mimeType === 'text/html') {
-          // Convert HTML to markdown (basic conversion)
-          const htmlString = data.toString('utf8');
-          const textContent = htmlString.replace(/<[^>]*>/g, '');
-          const markdownContent = `\`\`\`\n${textContent}\n\`\`\``;
-          return Buffer.from(markdownContent, 'utf8');
-        }
-        throw new Error('Cannot convert to Markdown');
-        
-      case '.json':
-        if (this.mimeType === 'application/json') {
-          return data;
-        }
-        if (this.mimeType === 'text/plain') {
-          // Try to parse as JSON, if it fails, wrap in quotes
-          const textContent = data.toString('utf8');
-          try {
-            JSON.parse(textContent);
-            return data; // Already valid JSON
-          } catch {
-            // Wrap in quotes to make it a valid JSON string
-            return Buffer.from(JSON.stringify(textContent), 'utf8');
-          }
-        }
-        if (this.mimeType === 'text/markdown' || this.mimeType === 'text/html') {
-          // Convert to JSON by wrapping content in quotes
-          const content = data.toString('utf8');
-          return Buffer.from(JSON.stringify(content), 'utf8');
-        }
-        throw new Error('Cannot convert to JSON');
-        
+        return Buffer.from(htmlText, 'utf8');
+      
+      case 'application/json':
+        const jsonString = data.toString('utf8');
+        const parsed = JSON.parse(jsonString);
+        const formattedJson = JSON.stringify(parsed, null, 2);
+        const jsonHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>JSON Data</title>
+</head>
+<body>
+  <pre>${formattedJson}</pre>
+</body>
+</html>`;
+        return Buffer.from(jsonHtml, 'utf8');
+      
       default:
-        throw new Error(`Unsupported conversion to ${extension}`);
+        throw new Error(`Cannot convert ${this.mimeType} to HTML`);
+    }
+  }
+
+  _convertToMarkdown(data) {
+    switch (this.mimeType) {
+      case 'text/markdown':
+        return data;
+      
+      case 'text/plain':
+      case 'text/html':
+        // Basic conversion - wrap in code block
+        const content = data.toString('utf8');
+        const cleanContent = content.replace(/<[^>]*>/g, '');
+        return Buffer.from(`\`\`\`\n${cleanContent}\n\`\`\``, 'utf8');
+      
+      default:
+        throw new Error(`Cannot convert ${this.mimeType} to Markdown`);
+    }
+  }
+
+  _convertToJson(data) {
+    switch (this.mimeType) {
+      case 'application/json':
+        return data;
+      
+      case 'text/csv':
+        const csvString = data.toString('utf8');
+        const records = csvParse(csvString, { columns: true });
+        return Buffer.from(JSON.stringify(records, null, 2), 'utf8');
+      
+      case 'application/yaml':
+        const yamlString = data.toString('utf8');
+        const yamlData = yaml.load(yamlString);
+        return Buffer.from(JSON.stringify(yamlData, null, 2), 'utf8');
+      
+      case 'text/plain':
+      case 'text/markdown':
+      case 'text/html':
+        // Wrap text content as JSON string
+        const textContent = data.toString('utf8');
+        return Buffer.from(JSON.stringify(textContent), 'utf8');
+      
+      default:
+        throw new Error(`Cannot convert ${this.mimeType} to JSON`);
+    }
+  }
+
+  _convertToYaml(data) {
+    switch (this.mimeType) {
+      case 'application/yaml':
+        return data;
+      
+      case 'application/json':
+        const jsonString = data.toString('utf8');
+        const jsonData = JSON.parse(jsonString);
+        const yamlOutput = yaml.dump(jsonData);
+        return Buffer.from(yamlOutput, 'utf8');
+      
+      case 'text/plain':
+      case 'text/markdown':
+      case 'text/html':
+        // Wrap text content as YAML string
+        const textContent = data.toString('utf8');
+        const yamlText = yaml.dump({ content: textContent });
+        return Buffer.from(yamlText, 'utf8');
+      
+      default:
+        throw new Error(`Cannot convert ${this.mimeType} to YAML`);
+    }
+  }
+
+  _convertToCsv(data) {
+    switch (this.mimeType) {
+      case 'text/csv':
+        return data;
+      
+      case 'application/json':
+        const jsonString = data.toString('utf8');
+        const jsonData = JSON.parse(jsonString);
+        
+        // Handle array of objects
+        if (Array.isArray(jsonData) && jsonData.length > 0 && typeof jsonData[0] === 'object') {
+          const csvOutput = csvStringify(jsonData, { header: true });
+          return Buffer.from(csvOutput, 'utf8');
+        }
+        
+        // Handle single object
+        if (typeof jsonData === 'object' && !Array.isArray(jsonData)) {
+          const csvOutput = csvStringify([jsonData], { header: true });
+          return Buffer.from(csvOutput, 'utf8');
+        }
+        
+        throw new Error('JSON data must be an object or array of objects for CSV conversion');
+      
+      case 'text/plain':
+        // Convert plain text to simple CSV
+        const lines = data.toString('utf8').split('\n');
+        const csvData = lines.map(line => [line]);
+        const csvOutput = csvStringify(csvData);
+        return Buffer.from(csvOutput, 'utf8');
+      
+      default:
+        throw new Error(`Cannot convert ${this.mimeType} to CSV`);
+    }
+  }
+
+  async _convertToImage(data, format) {
+    // Only allow image-to-image conversions
+    if (!this.mimeType.startsWith('image/')) {
+      throw new Error(`Cannot convert ${this.mimeType} to image format`);
+    }
+
+    try {
+      const convertedBuffer = await sharp(data)
+        .toFormat(format)
+        .toBuffer();
+      
+      return convertedBuffer;
+    } catch (error) {
+      throw new Error(`Failed to convert image to ${format}: ${error.message}`);
     }
   }
 

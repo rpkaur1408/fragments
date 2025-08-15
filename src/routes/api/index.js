@@ -50,6 +50,11 @@ router.post('/fragments', rawBody(), (req, res, next) => {
   require('./post')(req, res, next);
 });
 
+router.put('/fragments/:id', rawBody(), (req, res, next) => {
+  logger.info({ method: 'PUT', path: `/fragments/${req.params.id}`, contentLength: req.headers['content-length'] }, 'Received request');
+  require('./put')(req, res, next);
+});
+
 router.delete('/fragments/:id', (req, res, next) => {
   logger.info({ method: 'DELETE', path: `/fragments/${req.params.id}` }, 'Received request');
   require('./delete')(req, res, next);

@@ -56,6 +56,30 @@ const getFragmentById = async (req, res) => {
           case '.json':
             contentType = 'application/json';
             break;
+          case '.yaml':
+          case '.yml':
+            contentType = 'application/yaml';
+            break;
+          case '.csv':
+            contentType = 'text/csv';
+            break;
+          // Image formats
+          case '.png':
+            contentType = 'image/png';
+            break;
+          case '.jpg':
+          case '.jpeg':
+            contentType = 'image/jpeg';
+            break;
+          case '.webp':
+            contentType = 'image/webp';
+            break;
+          case '.gif':
+            contentType = 'image/gif';
+            break;
+          case '.avif':
+            contentType = 'image/avif';
+            break;
           default:
             logger.warn({ user: req.user, id: fragmentId, extension }, 'Unsupported extension');
             return res.status(415).json(

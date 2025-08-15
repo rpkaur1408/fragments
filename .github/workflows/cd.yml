@@ -90,7 +90,7 @@ jobs:
           # for any values that should not be checked into git directly.  Here are
           # a few to get you started, but you should fill in the rest yourself.
           environment-variables: |
-            PORT=80
+            PORT=8080
             LOG_LEVEL=debug
             NODE_ENV=production
             AWS_COGNITO_POOL_ID=${{ secrets.AWS_COGNITO_POOL_ID }}
