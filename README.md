@@ -2,7 +2,7 @@
 
 A cloud-native microservice for storing and converting small fragments of text, JSON, and image data — built with Node.js, deployed on AWS, and backed by a full CI/CD pipeline.
 
-![CI](https://github.com/rpkaur1408/fragments/actions/workflows/ci.yml/badge.svg)
+
 
 
 ## Overview
